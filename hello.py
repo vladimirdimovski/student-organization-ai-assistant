@@ -7,10 +7,10 @@ client = anthropic.Anthropic()     # the SDK reads the key from the environment
 response = client.messages.create(
     model="claude-haiku-5-5",
     max_tokens=2000,
-    system="You are a helpful assistant for AIESEC in North Macedonia. "
-           "Reply in the language the user writes in.",
+    # system="You are a helpful assistant for AIESEC in North Macedonia. "
+    #        "Reply in the language the user writes in.",
     messages=[
-        {"role": "user", "content": "Што е AIESEC?"}
+        {"role": "user", "content": "What is AIESEC?"}
     ],
 )
 
