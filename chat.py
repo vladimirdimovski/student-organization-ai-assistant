@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+from pricing import request_cost
 import anthropic
 
 load_dotenv()
@@ -9,6 +10,8 @@ SYSTEM = ("You are a helpful assistant for AIESEC in North Macedonia. "
           "Reply in the language the user writes in.")
 
 history = []   # the API is stateless: this list IS the conversation
+
+session = {"in": 0, "out": 0, "thinking":0, "cost": 0.0}
 
 while True:
     user_input = input("\nYou: ").strip()
@@ -47,4 +50,17 @@ while True:
     history.append({"role": "assistant", "content": final.content})
 
     u = final.usage
-    print(f"\n[stop={final.stop_reason} in={u.input_tokens} out={u.output_tokens}]")
+    details = getattr(u, "output_tokens_details", None)
+    thinking = getattr(details, "thinking_tokens", 0) or 0
+    cost = request_cost(MODEL, u)
+
+    session["in"] += u.input_tokens
+    session["out"] += u.output_tokens
+    session["thinking"] += thinking
+    session["cost"] += cost
+
+    print(f"\n[{final.stop_reason} | in={u.input_tokens} out={u.output_tokens} "
+          f"(thinking={thinking}) | ${cost:.5f} | session ${session['cost']:.5f}]")
+
+print(f"\nSession: {session['in']} in, {session['out']} out "
+      f"({session['thinking']} thinking) — ${session['cost']:.5f}")
