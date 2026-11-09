@@ -1,0 +1,15 @@
+# Let Git detect text files and store them with LF line endings in the repo
+* text=auto eol=lf
+
+# PowerShell and batch scripts need CRLF to behave on Windows
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Lockfile: don't try to show line-by-line diffs or merge it by hand
+uv.lock -diff linguist-generated
+
+# Binary files: never touch line endings
+*.png binary
+*.jpg binary
+*.pdf binary
