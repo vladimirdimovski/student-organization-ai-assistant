@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "Bash(uv run fewshot.py)",
       "Bash(uv run chat.py)",
       "Bash(uv run compare.py)",
       "Bash(uv run hello.py)",

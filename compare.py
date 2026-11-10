@@ -1,7 +1,11 @@
+import sys
 import time
 from dotenv import load_dotenv
 import anthropic
 from pricing import request_cost
+
+# Windows consoles default to cp1252, which cannot print Cyrillic or the ✓ mark
+sys.stdout.reconfigure(encoding="utf-8")
 
 load_dotenv()
 client = anthropic.Anthropic(max_retries=3, timeout=120.0)

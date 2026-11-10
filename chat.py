@@ -1,6 +1,10 @@
+import sys
 from dotenv import load_dotenv
 from pricing import request_cost
 import anthropic
+
+# Windows consoles default to cp1252, which cannot print Cyrillic
+sys.stdout.reconfigure(encoding="utf-8")
 
 load_dotenv()
 client = anthropic.Anthropic(max_retries=3, timeout=60.0)
