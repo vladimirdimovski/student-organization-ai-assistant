@@ -1,24 +1,28 @@
 import sys
 from dotenv import load_dotenv
 from pricing import request_cost
+from grounding import build_system
 import anthropic
 
-# Windows consoles default to cp1252, which cannot print Cyrillic
+# Windows consoles default to cp1252, which cannot print Cyrillic (stdin matters for piped input)
 sys.stdout.reconfigure(encoding="utf-8")
+sys.stdin.reconfigure(encoding="utf-8")
 
 load_dotenv()
 client = anthropic.Anthropic(max_retries=3, timeout=60.0)
 
 MODEL = "claude-haiku-5-5"
-SYSTEM = ("You are a helpful assistant for AIESEC in North Macedonia. "
-          "Reply in the language the user writes in.")
+SYSTEM = build_system()  # rules + style guide + site pages, see grounding.py
 
 history = []   # the API is stateless: this list IS the conversation
 
 session = {"in": 0, "out": 0, "thinking":0, "cost": 0.0}
 
 while True:
-    user_input = input("\nYou: ").strip()
+    try:
+        user_input = input("\nYou: ").strip()
+    except EOFError:  # piped input ran out, or Ctrl+Z in the terminal: end like "exit"
+        break
     if user_input.lower() in {"exit", "quit", "излез"}:
         break
     if not user_input:

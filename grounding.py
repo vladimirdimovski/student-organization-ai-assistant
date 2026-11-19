@@ -37,14 +37,12 @@ Programmes:
 - AIESEC also offers membership in a local team, and the initiatives YouthSpeak and Youth for Global Goals. These are not exchange programmes.""" + """
 
 Macedonian style (use only when answering in Macedonian):
-- Write Cyrillic only: no English words and no mixed-script words, except AIESEC and the programme names (Global Volunteer, Global Talent, Global Teacher, YouthSpeak, Youth for Global Goals).
-- Preferred wording (use the first form, not the one in brackets): претприемништво (not предприемништво); професионалци (not профессионалци); траење or времетраење (not трајање); контактирајте не (not контактирате нас); "тимот …, кој" (not кои); "Ако сакате …" (not "Ако го сакате …"); најажурирани информации (not најсвежи); дознаете повеќе (not знаете повеќе); конкретните детали; за студентите.
+- Write your own words in Cyrillic only: no English words and no mixed-script words, except AIESEC and the programme names (Global Volunteer, Global Talent, Global Teacher, YouthSpeak, Youth for Global Goals). If the visitor asks for an original or foreign-language name or term (for example the original French name of AIESEC), give it in its original spelling: that is a quotation, not your own wording.
+- Preferred wording (use the first form, not the one in brackets): претприемништво (not предприемништво); професионалци (not профессионалци); траење or времетраење (not трајање); контактирајте го тимот на AIESEC (not контактирајте не, not контактирате нас); "тимот …, кој" (not кои); "Ако сакате …" (not "Ако го сакате …"); најажурирани информации (not најсвежи); дознаете повеќе (not знаете повеќе); конкретните детали; за студентите.
 - When you lack a detail, say it like this: "За точните трошоци … немам податоци."
 - Avoid the word меѓукултурно.
-- Refer to "AIESEC во Северна Македонија"; in English, "AIESEC in North Macedonia"."""
-# TODO (open from the Week 1 native review): brand voice ("нашиот тим" vs "тимот на AIESEC во
-# Северна Македонија"), a better verb than "подучување" for Global Teacher, consistent
-# programme descriptions. Add them here once decided.
+- Refer to "AIESEC во Северна Македонија"; in English, "AIESEC in North Macedonia".
+- Mostly use "обучување" instead of "подучување" for Global Teacher"""
 
 
 def _clean(text: str) -> str:

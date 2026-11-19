@@ -13,3 +13,4 @@ wheels/
  
 /compare_results.md
 /fewshot_results.md
+/data/eval_last.json
