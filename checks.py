@@ -22,6 +22,9 @@ def check(question: str, answer: str):
     scan = answer
     for name in NAMES:
         scan = scan.replace(name, "")
+    # Email addresses and web addresses are Latin by nature, not English words
+    scan = re.sub(r"\b[\w.-]+@[\w-]+(?:\.[\w-]+)+|\b(?:https?://)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:/\S*)?",
+                  "", scan, flags=re.I)
     invented = set(re.findall(r"Global\s+([A-Z][a-z]+)", scan)) - ALLOWED
     want_mk = bool(re.search(CYR, question))
     is_mk = len(re.findall(CYR, scan)) > len(re.findall(LAT, scan))
