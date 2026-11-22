@@ -15,6 +15,7 @@ Learning project for the CCDV-F exam: explain *why* when making changes.
 - `checks.py`: deterministic answer checks, reused by the evals
 - `grounding.py`: builds the grounded system prompt from `data/pages.json` + optional `data/local_facts.md`
 - `grounded_demo.py`: first look at grounded answers with checks and cost
+- `evals.py`: batch eval suite (each question run 3 times); scores answers with `checks.py` + per-case patterns, saves `data/eval_last.json` (gitignored)
 
 ## Conventions
 - Default model: `claude-haiku-5-5`. Do not change models without asking.

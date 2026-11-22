@@ -1,5 +1,8 @@
 """Eval suite: run every test question through the grounded prompt in ONE batch and score it.
 
+Every question is asked RUNS times, because the model's answers vary from run to run: a case
+that passes once and fails once is flaky, and one run cannot tell you that.
+
 Usage:  uv run evals.py            submit a batch, wait for it, print the report
         uv run evals.py <batch_id> skip submitting, just fetch and score an earlier batch
                                    (batches can take a while; the id is printed on submit)
@@ -28,6 +31,7 @@ from pricing import request_cost
 sys.stdout.reconfigure(encoding="utf-8")
 
 MODEL = "claude-haiku-5-5"
+RUNS = 3  # each question is asked this many times
 BATCH_DISCOUNT = 0.5  # Message Batches API bills 50% of standard prices
 OUT = Path(__file__).parent / "data" / "eval_last.json"
 
@@ -93,12 +97,13 @@ def judge(case: dict, answer: str) -> list[str]:
 
 def submit(client) -> str:
     system = build_system()
-    batch = client.messages.batches.create(requests=[
-        {"custom_id": c["id"],
+    requests = [
+        {"custom_id": f"{c['id']}__{n}",  # custom_id only allows letters, digits, - and _
          "params": {"model": MODEL, "max_tokens": 2000, "system": system,
                     "messages": [{"role": "user", "content": c["q"]}]}}
-        for c in CASES])
-    print(f"Submitted batch {batch.id} ({len(CASES)} questions).")
+        for c in CASES for n in range(RUNS)]
+    batch = client.messages.batches.create(requests=requests)
+    print(f"Submitted batch {batch.id} ({len(CASES)} questions x {RUNS} runs = {len(requests)} requests).")
     print(f"If this window closes, fetch the results later with:  uv run evals.py {batch.id}")
     return batch.id
 
@@ -126,32 +131,44 @@ def collect(client, batch_id: str) -> dict:
     return out
 
 
+def score(case: dict, got) -> tuple[str, list[str], float]:
+    """One run -> (answer, failures, cost)."""
+    if got is None or got["status"] != "succeeded":
+        return "", [f"no result ({got['status'] if got else 'missing'})"], 0.0
+    answer = got["answer"]
+    failures = judge(case, answer)
+    if got["stop_reason"] != "end_turn":      # e.g. thinking used up max_tokens
+        failures.append(f"stop_reason={got['stop_reason']}")
+    if not answer.strip():
+        failures.append("empty answer")
+    return answer, failures, request_cost(MODEL, got["usage"]) * BATCH_DISCOUNT
+
+
 def report(results: dict, batch_id: str):
     rows, cost = [], 0.0
     for c in CASES:
-        got = results.get(c["id"])
-        if got is None or got["status"] != "succeeded":
-            failures = [f"no result ({got['status'] if got else 'missing'})"]
-            answer = ""
-        else:
-            answer = got["answer"]
-            failures = judge(c, answer)
-            if got["stop_reason"] != "end_turn":      # e.g. thinking used up max_tokens
-                failures.append(f"stop_reason={got['stop_reason']}")
-            if not answer.strip():
-                failures.append("empty answer")
-            cost += request_cost(MODEL, got["usage"]) * BATCH_DISCOUNT
-        rows.append({"id": c["id"], "kind": c["kind"], "q": c["q"], "answer": answer, "failures": failures})
+        runs = []
+        for n in range(RUNS):
+            answer, failures, run_cost = score(c, results.get(f"{c['id']}__{n}"))
+            cost += run_cost
+            runs.append({"answer": answer, "failures": failures})
+        rows.append({"id": c["id"], "kind": c["kind"], "q": c["q"], "runs": runs})
 
     for r in rows:
-        print(f"{'PASS' if not r['failures'] else 'FAIL'}  {r['id']:<20} {r['kind']}")
-    failed = [r for r in rows if r["failures"]]
-    for r in failed:
-        print(f"\n--- {r['id']}: {', '.join(r['failures'])}\nQ: {r['q']}\nA: {r['answer']}")
-    print(f"\n{len(rows) - len(failed)}/{len(rows)} passed — batch cost ${cost:.5f} (50% batch price)")
+        ok = sum(not run["failures"] for run in r["runs"])
+        print(f"{'PASS' if ok == RUNS else 'FAIL'}  {ok}/{RUNS}  {r['id']:<20} {r['kind']}")
+    for r in rows:
+        for n, run in enumerate(r["runs"], 1):
+            if run["failures"]:
+                print(f"\n--- {r['id']} (run {n}): {', '.join(run['failures'])}\nQ: {r['q']}\nA: {run['answer']}")
+    clean = sum(all(not run["failures"] for run in r["runs"]) for r in rows)
+    good = sum(not run["failures"] for r in rows for run in r["runs"])
+    print(f"\n{clean}/{len(rows)} questions passed every run; {good}/{len(rows) * RUNS} runs passed "
+          f"— batch cost ${cost:.5f} (50% batch price)")
 
     OUT.parent.mkdir(exist_ok=True)
-    OUT.write_text(json.dumps({"batch_id": batch_id, "model": MODEL, "when": datetime.now().isoformat(timespec="seconds"),
+    OUT.write_text(json.dumps({"batch_id": batch_id, "model": MODEL, "runs": RUNS,
+                               "when": datetime.now().isoformat(timespec="seconds"),
                                "rows": rows}, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"Full answers saved to {OUT.name}")
 
