@@ -14,17 +14,17 @@ load_dotenv()
 client = anthropic.Anthropic(max_retries=3, timeout=60.0)
 
 MODEL = "claude-haiku-5-5"
-SYSTEM = build_system()   # rules + style guide + site pages, see grounding.py
+SYSTEM = build_system()  # rules + style guide + site pages, see grounding.py
 
-history = []   # the API is stateless: this list IS the conversation
+history = []  # the API is stateless: this list IS the conversation
 
-session = {"in": 0, "out": 0, "thinking":0, "cost": 0.0}
+session = {"in": 0, "cached": 0, "out": 0, "thinking": 0, "cost": 0.0}
 
-GATE = ["no_mixed", "no_latin"]   # a failed check in this list triggers one rewrite, see checks.py
+GATE = ["no_mixed", "no_latin"]  # a failed check in this list triggers one rewrite, see checks.py
 # If the visitor asks for English or Latin-script text, Latin letters in the answer are what they asked for
 WANTS_LATIN = re.compile(r"англиск|латиниц|превед|превод|english|latin|translat", re.I)
 
-turn = {"in": 0, "out": 0, "thinking": 0, "cost": 0.0}   # totals for one visitor message, reset each time
+turn = {"in": 0, "cached": 0, "out": 0, "thinking": 0, "cost": 0.0}  # totals for one visitor message, reset each time
 
 
 def ask(messages):
@@ -34,8 +34,11 @@ def ask(messages):
     u = r.usage
     thinking = getattr(getattr(u, "output_tokens_details", None), "thinking_tokens", 0) or 0
     cost = request_cost(MODEL, u)
+    written = getattr(u, "cache_creation_input_tokens", 0) or 0
+    read = getattr(u, "cache_read_input_tokens", 0) or 0
     for totals in (turn, session):
-        totals["in"] += u.input_tokens
+        totals["in"] += u.input_tokens + written + read  # all input tokens, cached or not
+        totals["cached"] += read
         totals["out"] += u.output_tokens
         totals["thinking"] += thinking
         totals["cost"] += cost
@@ -49,7 +52,7 @@ def typed_so_far():
 
 
 def text_of(message):
-    return "".join(b.text for b in message.content if b.type == "text")   # by block type, never by index
+    return "".join(b.text for b in message.content if b.type == "text")  # by block type, never by index
 
 
 while True:
@@ -63,8 +66,8 @@ while True:
         continue
 
     history.append({"role": "user", "content": user_input})
-    turn.update({"in": 0, "out": 0, "thinking": 0, "cost": 0.0})
-    asked = user_input + " " + typed_so_far()   # the Latin words add to the allowed list, nothing else
+    turn.update({"in": 0, "cached": 0, "out": 0, "thinking": 0, "cost": 0.0})
+    asked = user_input + " " + typed_so_far()  # the Latin words add to the allowed list, nothing else
 
     try:
         final = ask(history)
@@ -112,8 +115,8 @@ while True:
     if retried:
         note = (f" | rewritten ({broke[:100]})" if all(results[c] for c in gate)
                 else f" | rewritten, still failing ({details[:100]})")
-    print(f"[{final.stop_reason} | in={turn['in']} out={turn['out']} "
+    print(f"[{final.stop_reason} | in={turn['in']} (cached {turn['cached']}) out={turn['out']} "
           f"(thinking={turn['thinking']}) | ${turn['cost']:.5f} | session ${session['cost']:.5f}{note}]")
 
-print(f"\nSession: {session['in']} in, {session['out']} out "
+print(f"\nSession: {session['in']} in ({session['cached']} cached), {session['out']} out "
       f"({session['thinking']} thinking) — ${session['cost']:.5f}")

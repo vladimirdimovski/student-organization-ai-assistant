@@ -79,7 +79,10 @@ def build_system(docs: list[dict] | None = None, with_examples: bool = False) ->
     body = "<documents>\n" + "\n".join(
         _doc(i, d["source"], d["title"], d["origin"], d["text"]) for i, d in enumerate(docs, 1)
     ) + "\n</documents>"
-    return [{"type": "text", "text": instructions}, {"type": "text", "text": body}]
+    # cache_control on the LAST block caches the whole prefix (instructions + documents); the
+    # prefix must stay byte-identical between requests, so nothing that changes goes in here
+    return [{"type": "text", "text": instructions},
+            {"type": "text", "text": body, "cache_control": {"type": "ephemeral"}}]
 
 
 if __name__ == "__main__":
