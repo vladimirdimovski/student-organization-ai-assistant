@@ -3,6 +3,7 @@ import re
 
 CYR = r"[\u0400-\u04FF]"
 LAT = r"[A-Za-z]"
+LATW = r"[A-Za-z\u00C0-\u024F]+"   # a whole Latin-script word, accents included (slično, not "sli" + "no")
 ALLOWED = {"Volunteer", "Talent", "Teacher"}
 OK_LATIN = {"AIESEC", "Global", "Volunteer", "Talent", "Teacher", "YouthSpeak"}  # Latin words allowed in Macedonian
 CHECKS = ["no_mixed", "programmes", "language", "plain", "short", "no_figures", "no_latin"]
@@ -11,8 +12,8 @@ CHECKS = ["no_mixed", "programmes", "language", "plain", "short", "no_figures", 
 # looks like an invented "Global X" programme and its words count as English words, and (b) a
 # short Macedonian answer that names programmes has more Latin than Cyrillic letters and fails
 # the language check. Longest name first.
-NAMES = ["Youth for Global Goals", "Global Volunteer", "Global Talent", "Global Teacher",
-         "YouthSpeak", "AIESEC"]
+NAMES = ["Association Internationale des Étudiants en Sciences Économiques et Commerciales", "Youth for Global Goals", "Global Volunteer", "Global Talent", "Global Teacher",
+         "YouthSpeak", "AIESECers", "AIESEC"]
 
 
 def check(question: str, answer: str):
@@ -28,7 +29,10 @@ def check(question: str, answer: str):
     invented = set(re.findall(r"Global\s+([A-Z][a-z]+)", scan)) - ALLOWED
     want_mk = bool(re.search(CYR, question))
     is_mk = len(re.findall(CYR, scan)) > len(re.findall(LAT, scan))
-    latin_words = sorted({w for w in re.findall(r"[A-Za-z]+", scan) if w not in OK_LATIN})
+    # Latin words the visitor typed themselves may be repeated in the answer
+    typed = {w.lower() for w in re.findall(LATW, question)}
+    latin_words = sorted({w for w in re.findall(LATW, scan)
+                          if w not in OK_LATIN and w.lower() not in typed})
     results = {
         "no_mixed": not mixed,                              # e.g. "студentski"
         "programmes": not invented,                         # e.g. "Global Internship"
