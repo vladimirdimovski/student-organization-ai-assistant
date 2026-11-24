@@ -14,6 +14,7 @@ agree to "it's free"), not exact wording, because the wording changes on every r
 What they cannot test is meaning: "doesn't claim internships are paid" needs a judge model.
 """
 import json
+import os
 import re
 import sys
 import time
@@ -30,7 +31,7 @@ from pricing import request_cost
 # Windows consoles default to cp1252, which cannot print Cyrillic
 sys.stdout.reconfigure(encoding="utf-8")
 
-MODEL = "claude-haiku-5-5"
+MODEL = os.environ.get("EVAL_MODEL", "claude-haiku-5-5")   # another model: $env:EVAL_MODEL = "claude-sonnet-5-5"
 RUNS = 3  # each question is asked this many times
 BATCH_DISCOUNT = 0.5  # Message Batches API bills 50% of standard prices
 OUT = Path(__file__).parent / "data" / "eval_last.json"
@@ -51,7 +52,8 @@ CASES = [
     dict(id="programmes-en", kind="answerable", q="Which programmes does AIESEC offer?",
          must=[r"Global Volunteer", r"Global Talent", r"Global Teacher"]),
     dict(id="programmes-mk", kind="answerable", q="Кои програми за размена ги има AIESEC?",
-         must=[r"Global Volunteer", r"Global Talent", r"Global Teacher"]),
+         must=[r"Global Volunteer", r"Global Talent", r"Global Teacher"],
+         must_not=[r"(?-i:Целите за одржлив)"]),   # the patterns ignore case; (?-i:) makes this part case-sensitive
     dict(id="youthspeak-en", kind="answerable", q="What is YouthSpeak?",
          must=[r"survey|forum|opinion|voice"]),
     dict(id="teacher-what-en", kind="answerable", q="What is Global Teacher?", must=[r"teach"]),
